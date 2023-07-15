@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <input id="input" type="text">
+    <button onclick="sendMsg()">发送</button>
+    <div id="message"></div>
+    <script>
+        const message = document.querySelector("#message")
+        const input = document.querySelector("#input")
+
+        function handleChatData (text) {
+            const data = text
+                .split('\n\n')
+                .filter((item) => item !== undefined && item !== null && item.trim() !== '')
+                .map((d) => {
+                    return JSON.parse(d)
+                })
+            return data
+        }
+        async function sendMsg () {
+
+            const response = await fetch('http://localhost:3001/chat', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                mode: "cors",
+                body: JSON.stringify({
+                    "prompt": input.value,
+                    "parentMessageId": "会话id" //会话id
+                })
+            })
+
+            const reader = response.body?.getReader?.()
+            let allContent = ''
+            while (true) {
+                const { done, value } = (await reader?.read()) || {}
+                if (done) {
+                    break
+                }
+                const text = new TextDecoder('utf-8').decode(value)
+                const texts = handleChatData(text)
+                console.log('``````````', texts)
+                for (let i = 0; i < texts.length; i++) {
+                    const { dateTime, role, content, segment } = texts[i]
+                    allContent += content ? content : ''
+                    if (segment === 'stop') {
+                        console.log('结束~~~~~~~')
+                        break
+                    }
+                    if (segment === 'start') {
+                        console.log('开始~~~~~~~')
+                    }
+                    if (segment === 'text') {
+                        message.innerHTML = allContent
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
